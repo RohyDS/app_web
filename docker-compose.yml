@@ -9,7 +9,7 @@ services:
       - ./backend:/var/www/html
       - /var/www/html/vendor
     networks:
-      - laravelc
+      - laravel
 
   frontend:
     build:
