@@ -11,6 +11,7 @@ class RepairItem extends Model
         'repair_id', 
         'intervention_id', 
         'status', 
+        'price',
         'remaining_time'
     ];
 

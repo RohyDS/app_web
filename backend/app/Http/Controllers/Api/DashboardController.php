@@ -13,20 +13,23 @@ class DashboardController extends Controller
 {
     public function statistics()
     {
-        $totalRevenue = Repair::where('status', 'paid')->sum('total_amount');
+        $totalRevenue = \App\Models\Payment::sum('amount');
         $totalClients = User::count();
         $activeRepairs = Repair::whereIn('status', ['pending', 'in_progress', 'completed', 'waiting_for_payment'])->count();
+        $totalRepairs = Repair::count();
 
         return response()->json([
             'total_revenue' => $totalRevenue,
             'total_clients' => $totalClients,
-            'active_repairs' => $activeRepairs
+            'active_repairs' => $activeRepairs,
+            'total_repairs' => $totalRepairs
         ]);
     }
 
     public function activeRepairs()
     {
         $repairs = Repair::with(['car.user', 'items.intervention'])
+            ->withSum('payments', 'amount')
             ->whereIn('status', ['pending', 'in_progress', 'completed', 'waiting_for_payment'])
             ->orderBy('created_at', 'desc')
             ->get();

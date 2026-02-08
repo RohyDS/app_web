@@ -4,10 +4,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: laravel_app
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
-      - /var/www/html/vendor
     networks:
       - laravel
 

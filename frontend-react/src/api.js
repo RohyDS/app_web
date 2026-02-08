@@ -13,5 +13,6 @@ export const getRepairs = () => api.get('/repairs');
 export const updateRepairStatus = (id, status) => api.patch(`/repairs/${id}/status`, { status });
 export const createRepair = (data) => api.post('/repairs', data);
 export const getCars = () => api.get('/cars');
+export const syncFirebase = () => api.post('/sync-firebase');
 
 export default api;

@@ -9,6 +9,9 @@ use App\Models\Intervention;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client;
+use Google\Auth\Credentials\ServiceAccountCredentials;
 
 class RepairController extends Controller
 {
@@ -17,7 +20,7 @@ class RepairController extends Controller
      */
     public function index(): JsonResponse
     {
-        return response()->json(Repair::with(['car', 'items.intervention'])->get());
+        return response()->json(Repair::with(['car.user', 'items.intervention'])->withSum('payments', 'amount')->get());
     }
 
     /**
@@ -59,12 +62,29 @@ class RepairController extends Controller
     /**
      * Update repair status.
      */
-    public function updateStatus(Request $request, Repair $repair): JsonResponse
+    public function updateStatus(Request $request, $id): JsonResponse
     {
+        $repair = Repair::findOrFail($id);
+        
         $validated = $request->validate([
-            'status' => 'required|in:pending,in_progress,completed,waiting_for_payment,paid',
+            'status' => 'required|in:pending,in_progress,completed,waiting_for_payment',
             'slot_number' => 'nullable|integer|in:1,2',
         ]);
+
+        // Vérifier la capacité du garage si on passe en "En cours"
+        if ($validated['status'] === 'in_progress' && $repair->status !== 'in_progress') {
+            $busySlots = Repair::where('status', 'in_progress')->pluck('slot_number')->toArray();
+            if (count($busySlots) >= 2) {
+                return response()->json([
+                    'message' => 'Le garage est déjà complet (2 voitures en cours). Terminez une réparation avant d\'en commencer une nouvelle.'
+                ], 422);
+            }
+            
+            // Attribuer un slot automatiquement si non fourni
+            if (!isset($validated['slot_number'])) {
+                $validated['slot_number'] = in_array(1, $busySlots) ? 2 : 1;
+            }
+        }
 
         if ($validated['status'] === 'in_progress' && !$repair->started_at) {
             $repair->started_at = now();
@@ -75,6 +95,13 @@ class RepairController extends Controller
         }
 
         $repair->update($validated);
+
+        // Déclencher la synchronisation vers Firebase pour mettre à jour le statut en temps réel
+        try {
+            app(\App\Http\Controllers\Api\FirebaseSyncController::class)->sync();
+        } catch (\Exception $e) {
+            Log::error("Erreur lors du déclenchement de la synchro Firebase après updateStatus: " . $e->getMessage());
+        }
 
         return response()->json($repair);
     }

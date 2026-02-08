@@ -10,11 +10,14 @@ class Repair extends Model
 {
     protected $fillable = [
         'car_id', 
+        'firebase_id',
         'status', 
         'slot_number', 
         'started_at', 
         'completed_at', 
-        'total_amount'
+        'total_amount',
+        'notified',
+        'created_at'
     ];
 
     public function car(): BelongsTo
@@ -25,5 +28,10 @@ class Repair extends Model
     public function items(): HasMany
     {
         return $this->hasMany(RepairItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 }
